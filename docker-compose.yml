@@ -1,0 +1,98 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./app:/var/www/html/app:cached
+      - .:/var/www/html:cached
+      - ./routes:/var/www/html/routes:cached
+      - ./database:/var/www/html/database:cached
+    ports:
+      - "9001:9000"
+    command: php-fpm
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - laravel_network
+
+  nginx:
+    image: nginx:alpine
+    volumes:
+      - .:/var/www/html
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf
+    ports:
+      - "80:80"
+    depends_on:
+      - app
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    networks:
+      - laravel_network
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    networks:
+      - laravel_network
+    environment:
+      - MH_STORAGE=memory
+      - MH_HOSTNAME=mailhog
+
+  schedules-queue:
+    build: .
+    command: php artisan queue:work --queue=schedules --sleep=1 --tries=2 --max-time=300
+    volumes:
+      - .:/var/www/html
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - laravel_network
+
+#  vite:
+#    image: node:18
+#    working_dir: /var/www/html
+#    volumes:
+#      - .:/var/www/html:cached
+#      - vite_node_modules:/var/www/html/node_modules:cached
+#    environment:
+#      - CHOKIDAR_USEPOLLING=false
+#      - NODE_ENV=development
+#    ports:
+#      - "5173:5173"
+#    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+#    deploy:
+#      resources:
+#        limits:
+#          cpus: '1.0'  # محدود به 1 CPU core
+#          memory: 512M
+#    networks:
+#      - laravel_network
+#    depends_on:
+#      - app
+
+  redis:
+    image: redis:alpine
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    networks:
+      - laravel_network
+
+volumes:
+  node_modules:
+  vite_node_modules:
+
+networks:
+  laravel_network:
+    driver: bridge
