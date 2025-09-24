@@ -27,8 +27,8 @@ class SearchController extends Controller
         }
 
         return Response::json([
-            'result' => $query->get() ?? 'no result',
-            'message' => 'search result'
+            'data' => $query->get() ?? 'No Result',
+            'message' => 'Search Result'
         ]);
     }
 }

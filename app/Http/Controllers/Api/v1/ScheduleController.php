@@ -4,17 +4,15 @@ namespace App\Http\Controllers\Api\v1;
 
 use App\Enums\AppointmentStatus;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Api\v1\Appointment\AppointmentStoreRequest;
+use App\Http\Requests\Api\v1\Appointment\StoreRequest;
 use App\Http\Requests\Api\v1\Schedule\FindFirstAvailableTime;
-use App\Http\Requests\Api\v1\Schedule\ScheduleUpdateRequest;
-use App\Mail\AppointmentSet;
+use App\Http\Requests\Api\v1\Schedule\UpdateRequest;
 use App\Models\Appointment;
 use App\Models\Schedule;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Response;
 
 class ScheduleController extends Controller
@@ -26,27 +24,27 @@ class ScheduleController extends Controller
     public function show(Schedule $schedule): JsonResponse
     {
         return Response::json([
-            'message' => 'schedule',
-            'result' => $schedule
+            'data' => $schedule,
+            'message' => 'Schedule Show',
         ]);
     }
 
     /**
      * @param Schedule $schedule
-     * @param ScheduleUpdateRequest $request
+     * @param UpdateRequest $request
      * @return JsonResponse
      */
-    public function update(Schedule $schedule, ScheduleUpdateRequest $request): JsonResponse
+    public function update(Schedule $schedule, UpdateRequest $request): JsonResponse
     {
         $schedule->update($request->validated());
 
         return Response::json([
-            'message' => 'schedule updated',
-            'result' => $schedule
+            'data' => $schedule,
+            'message' => 'Schedule Updated',
         ]);
     }
 
-    public function reserve(User $user, Schedule $schedule, AppointmentStoreRequest $request): JsonResponse
+    public function reserve(User $user, Schedule $schedule, StoreRequest $request): JsonResponse
     {
         $validated = $request->validated();
 
@@ -74,18 +72,9 @@ class ScheduleController extends Controller
             'patient_id' => Auth::user()->id
         ]);
 
-        Mail::to(Auth::user())->send(
-            new AppointmentSet(
-                $appointment,
-                $user,
-                User::find(Auth::user()->id),
-                $schedule,
-            )
-        );
-
         return Response::json([
-            'message' => 'appointment stored',
-            'result' => $appointment
+            'data' => $appointment,
+            'message' => 'AppointmentPolicy Stored',
         ]);
     }
 
@@ -120,7 +109,7 @@ class ScheduleController extends Controller
         }
 
         return Response::json([
-            'message' => 'no time available'
+            'message' => 'No Time Available'
         ]);
     }
 
@@ -128,14 +117,14 @@ class ScheduleController extends Controller
     {
         if ($user->isDoctor()) {
             return Response::json([
-                'schedules' => $user->doctorSchedules()->get(),
+                'data' => $user->doctorSchedules()->get(),
                 'message' => "All $user->first_name $user->last_name Schedules"
             ]);
         }
 
         return Response::json([
-            'schedules' => Schedule::all(),
-            'message' => "All Schedules"
+            'data' => Schedule::all(),
+            'message' => "Schedules List"
         ]);
     }
 }

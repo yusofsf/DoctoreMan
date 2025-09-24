@@ -3,27 +3,27 @@
 namespace App\Http\Controllers\Api\v1;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Api\v1\Patient\PatientStoreRequest;
-use App\Http\Requests\Api\v1\Patient\PatientUpdateRequest;
+use App\Http\Requests\Api\v1\Patient\StoreRequest;
+use App\Http\Requests\Api\v1\Patient\UpdateRequest;
 use App\Models\Patient;
-use App\Models\User;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Response;
 
 class PatientController extends Controller
 {
+    use AuthorizesRequests;
+
     /**
      * @return JsonResponse
      */
     public function index(): JsonResponse
     {
-        Gate::allowIf(fn (User $user) => $user->isAdministrator());
-
         return Response::json([
-            'message' => 'All Patients',
-            'result' => Patient::all()
+            'data' => Patient::all(),
+            'message' => 'Patients List',
+
         ]);
     }
 
@@ -34,11 +34,9 @@ class PatientController extends Controller
      */
     public function show(Patient $patient): JsonResponse
     {
-        Gate::allowIf(fn (User $user) => $user->isAdministrator() || $user->isPatient());
-
         return Response::json([
-            'message' => 'patient',
-            'result' => $patient
+            'data' => $patient,
+            'message' => 'Patient Show',
         ]);
     }
 
@@ -46,39 +44,37 @@ class PatientController extends Controller
      * @param Patient $patient
      * @return JsonResponse
      */
-    public function delete(Patient $patient): JsonResponse
+    public function destroy(Patient $patient): JsonResponse
     {
-        Gate::allowIf(fn (User $user) => $user->isAdministrator());
-
         $patient->delete();
 
         return Response::json([
-            'message' => 'patient deleted',
+            'message' => 'Patient Deleted',
         ]);
     }
 
     /**
      * @param Patient $patient
-     * @param PatientUpdateRequest $request
+     * @param UpdateRequest $request
      * @return JsonResponse
      */
-    public function update(Patient $patient, PatientUpdateRequest $request): JsonResponse
+    public function update(Patient $patient, UpdateRequest $request): JsonResponse
     {
         $patient->update($request->validated());
 
         return Response::json([
-            'message' => 'patient updated',
-            'result' => $patient
+            'data' => $patient,
+            'message' => 'Patient Updated',
         ]);
     }
 
-    public function store(PatientStoreRequest $request): JsonResponse
+    public function store(StoreRequest $request): JsonResponse
     {
         $patient = Auth::user()->patient()->create($request->validated());
 
         return Response::json([
-            'message' => 'patient stored',
-            'result' => $patient
+            'data' => $patient,
+            'message' => 'Patient Stored',
         ]);
     }
 }

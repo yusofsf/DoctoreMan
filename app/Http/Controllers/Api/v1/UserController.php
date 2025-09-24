@@ -2,15 +2,11 @@
 
 namespace App\Http\Controllers\Api\v1;
 
-use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Api\v1\Doctor\DoctorStoreRequest;
-use App\Http\Requests\Api\v1\User\UserStoreRequest;
-use App\Http\Requests\User\UserUpdateRequest;
-use App\Jobs\GenerateSchedules;
+use App\Http\Requests\Api\v1\User\StoreRequest;
+use App\Http\Requests\User\UpdateRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Response;
 
@@ -21,19 +17,11 @@ class UserController extends Controller
      */
     public function index(): JsonResponse
     {
-        Gate::allowIf(fn (User $user) => $user->isAdministrator());
+        //Gate::allowIf(fn (User $user) => $user->isAdministrator());
 
         return Response::json([
-            'message' => 'All Users',
-            'result' => User::with('patient', 'doctor')->get()
-        ]);
-    }
-
-    public function indexDoctor(): JsonResponse
-    {
-        return Response::json([
-            'message' => 'All Doctors',
-            'result' => User::where('role', UserRole::DOCTOR)->get()
+            'data' => User::with('patient', 'doctor', 'administrator')->get(),
+            'message' => 'Users List',
         ]);
     }
 
@@ -44,11 +32,11 @@ class UserController extends Controller
      */
     public function show(User $user): JsonResponse
     {
-        Gate::allowIf(fn (User $user) => $user->isAdministrator());
+        //Gate::allowIf(fn (User $user) => $user->isAdministrator());
 
         return Response::json([
-            'message' => 'user',
-            'result' => $user
+            'data' => $user,
+            'message' => 'User Show',
         ]);
     }
 
@@ -56,52 +44,39 @@ class UserController extends Controller
      * @param User $user
      * @return JsonResponse
      */
-    public function delete(User $user): JsonResponse
+    public function destroy(User $user): JsonResponse
     {
         Gate::allowIf(fn (User $user) => $user->isAdministrator());
 
         $user->delete();
 
         return Response::json([
-            'message' => 'user deleted',
+            'message' => 'User Deleted',
         ]);
     }
 
     /**
      * @param User $user
-     * @param UserUpdateRequest $request
+     * @param UpdateRequest $request
      * @return JsonResponse
      */
-    public function update(User $user, UserUpdateRequest $request): JsonResponse
+    public function update(User $user, UpdateRequest $request): JsonResponse
     {
         $user->update($request->validated());
 
         return Response::json([
-            'message' => 'user updated',
-            'result' => $user
+            'data' => $user,
+            'message' => 'User Updated',
         ]);
     }
 
-    public function store(UserStoreRequest $request): JsonResponse
+    public function store(StoreRequest $request): JsonResponse
     {
-        $validated = $request->validated();
-        if ($validated['role'] === UserRole::DOCTOR) {
-            $doctor = User::create($validated);
-
-            // Dispatch job asynchronously without waiting
-            GenerateSchedules::dispatch($doctor)->onQueue('schedules');
-
-            return Response::json([
-                'message' => 'doctor stored',
-                'result' => $doctor
-            ]);
-        }
-
-        $admin = User::create($validated);
+        $user = User::create($request->validated());
 
         return Response::json([
-            'message' => 'admin stored',
-            'result' => $admin
+            'data' => $user,
+            'message' => 'User Stored',
         ]);
     }
 }
