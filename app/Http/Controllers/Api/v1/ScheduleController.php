@@ -5,12 +5,10 @@ namespace App\Http\Controllers\Api\v1;
 use App\Enums\AppointmentStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\v1\Appointment\StoreRequest;
-use App\Http\Requests\Api\v1\Schedule\FindFirstAvailableTime;
 use App\Http\Requests\Api\v1\Schedule\UpdateRequest;
 use App\Models\Appointment;
 use App\Models\Schedule;
 use App\Models\User;
-use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Response;
@@ -75,41 +73,6 @@ class ScheduleController extends Controller
         return Response::json([
             'data' => $appointment,
             'message' => 'AppointmentPolicy Stored',
-        ]);
-    }
-
-    public function findFirstAvailableTime(User $user, FindFirstAvailableTime $request): JsonResponse
-    {
-        $validated = $request->validated();
-        $date = $validated['date'];
-        $dayOfWeek = strtolower(Carbon::parse($date)->englishDayOfWeek); // e.g. "Monday"
-
-        $schedules = Schedule::where('user_id', $user->id)
-            ->where('day_of_week', $dayOfWeek)
-            ->orderBy('start_time')
-            ->get();
-
-        $bookedScheduleIds = Appointment::where('user_id', $user->id)
-            ->where('date', $date)
-            ->whereNot('status', AppointmentStatus::CANCELLED)
-            ->whereNot('status', AppointmentStatus::AVAILABLE)
-            ->pluck('schedule_id')
-            ->toArray();
-
-        foreach ($schedules as $slot) {
-            if (!in_array($slot->id, $bookedScheduleIds)) {
-                return Response::json([
-                    'schedule_id' => $slot->id,
-                    'start_time' => $slot->start_time,
-                    'end_time' => $slot->end_time,
-                    'date' => $date,
-                    'day_of_week' => $dayOfWeek
-                ]);
-            }
-        }
-
-        return Response::json([
-            'message' => 'No Time Available'
         ]);
     }
 
