@@ -19,15 +19,13 @@ class AuthController extends Controller
      */
     public function login(LoginRequest $request): JsonResponse
     {
-        $validated = $request->validated();
-
-        if (Auth::attempt($validated)) {
+        if (Auth::attempt($request->validated())) {
             $user = Auth::user();
 
             $token = $user->createToken($user->user_name . $user->password . Carbon::now())->plainTextToken;
 
             return Response::json([
-                'result' => $user,
+                'data' => $user,
                 'token' => $token,
                 'message' => 'User Successfully Logged In',
             ]);
@@ -44,25 +42,12 @@ class AuthController extends Controller
      */
     public function register(RegisterRequest $request): JsonResponse
     {
-        $validated = $request->validated();
-        
-        // Debug: Log the validated data
-        \Log::info('Register request validated data:', $validated);
-        
-        try {
-            $user = User::create($validated);
-        } catch (\Exception $e) {
-            \Log::error('User creation failed:', [
-                'error' => $e->getMessage(),
-                'data' => $validated
-            ]);
-            throw $e;
-        }
+        $user = User::create($request->validated());
 
         $token = $user->createToken($user->user_name . $user->password . Carbon::now())->plainTextToken;
 
         return Response::json([
-            'result' => $user,
+            'data' => $user,
             'token' => $token,
             'message' => 'User Created'
         ], 201);
