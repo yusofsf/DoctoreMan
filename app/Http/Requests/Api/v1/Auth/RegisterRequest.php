@@ -33,6 +33,7 @@ class RegisterRequest extends FormRequest
             'role' => [Rule::enum(UserRole::class)],
             'email' => 'string|required|unique:users,email|email:rfc',
             'password' => 'string|required|min:6|confirmed',
+            'address' => 'string|nullable',
         ];
     }
 }
