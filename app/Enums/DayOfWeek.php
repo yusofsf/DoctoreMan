@@ -28,7 +28,7 @@ enum DayOfWeek: string
     }
 
     // برای نمایش فارسی
-    public function persian(): string
+    public function getLabel(): string
     {
         return match($this) {
             self::SATURDAY => 'شنبه',
@@ -41,17 +41,10 @@ enum DayOfWeek: string
         };
     }
 
-    // برای ترتیب روزها
-    public function order(): int
+    public static function getOptions(): array
     {
-        return match($this) {
-            self::SATURDAY => 0,
-            self::SUNDAY => 1,
-            self::MONDAY => 2,
-            self::TUESDAY => 3,
-            self::WEDNESDAY => 4,
-            self::THURSDAY => 5,
-            self::FRIDAY => 6,
-        };
+        return collect(self::cases())
+            ->mapWithKeys(fn($case) => [$case->value => $case->getLabel()])
+            ->toArray();
     }
 }
