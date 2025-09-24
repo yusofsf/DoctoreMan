@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\Api\v1\AdminController;
 use App\Http\Controllers\Api\v1\AppointmentController;
 use App\Http\Controllers\Api\v1\AuthController;
+use App\Http\Controllers\Api\v1\DoctorController;
 use App\Http\Controllers\Api\v1\PatientController;
 use App\Http\Controllers\Api\v1\ScheduleController;
 use App\Http\Controllers\Api\v1\SearchController;
@@ -22,8 +24,26 @@ Route::prefix('v1')->group( function () {
                 Route::get('/', 'index');
                 Route::post('/', 'store');
                 Route::get('/{user}', 'show');
-                Route::delete('/{user}', 'delete');
+                Route::delete('/{user}', 'destroy');
                 Route::patch('/{user}', 'update');
+            });
+
+        Route::prefix('doctors')
+            ->controller(DoctorController::class)->group(function () {
+                Route::get('/', 'index');
+                Route::post('/', 'store');
+                Route::get('/{doctor}', 'show');
+                Route::delete('/{doctor}', 'destroy');
+                Route::patch('/{doctor}', 'update');
+            });
+
+        Route::prefix('admins')
+            ->controller(AdminController::class)->group(function () {
+                Route::get('/', 'index');
+                Route::post('/', 'store');
+                Route::get('/{admin}', 'show');
+                Route::delete('/{admin}', 'destroy');
+                Route::patch('/{admin}', 'update');
             });
 
         Route::prefix('patients')
@@ -31,7 +51,7 @@ Route::prefix('v1')->group( function () {
                 Route::get('/', 'index');
                 Route::post('', 'store');
                 Route::get('/{patient}', 'show');
-                Route::delete('/{patient}', 'delete');
+                Route::delete('/{patient}', 'destroy');
                 Route::patch('/{patient}', 'update');
             });
 
@@ -39,7 +59,6 @@ Route::prefix('v1')->group( function () {
             ->controller(ScheduleController::class)->group(function () {
                 Route::get('/{schedule}', 'show');
                 Route::patch('/{schedules}', 'update');
-                Route::post('/{user}/find-first-available-time', 'findFirstAvailableTime');
                 Route::post('/{schedule}/users/{user}/reserve', 'reserve');
                 Route::get('/users/{user}/schedules', 'allSchedules');
             });
@@ -54,6 +73,5 @@ Route::prefix('v1')->group( function () {
             });
     });
 
-    Route::get('/doctors', [UserController::class, 'indexDoctors']);
     Route::get('/search', SearchController::class);
 });
