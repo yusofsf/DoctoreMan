@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\Gender;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -17,7 +18,9 @@ class PatientFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'gender' => $this->faker->randomElement(array_column(Gender::cases(), 'value')),
+            'birth_date' => $this->faker->date(),
+            'phone_number' => $this->faker->phoneNumber(),
         ];
     }
 }
