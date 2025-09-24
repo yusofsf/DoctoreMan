@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\UserRole;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -13,7 +13,7 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, HasApiTokens;
 
     /**
@@ -28,12 +28,8 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
-        'phone',
         'address',
-        'city',
-        'bio',
-        'specialization',
-        'session_duration'
+        'email_verified_at',
     ];
 
     /**
@@ -45,6 +41,16 @@ class User extends Authenticatable
         'password',
         'remember_token',
     ];
+
+    public function hasRole(string $role): bool
+    {
+        return $this->role === $role;
+    }
+
+    public function hasAnyRole(array $roles): bool
+    {
+        return in_array($this->role, $roles);
+    }
 
     public function isAdministrator(): bool
     {
@@ -98,5 +104,12 @@ class User extends Authenticatable
     public function patient(): HasOne
     {
         return $this->hasOne(Patient::class);
+    }
+
+    // Option A: If you have first_name and last_name
+    public function getNameAttribute(): string
+    {
+        return trim($this->first_name . ' ' . $this->last_name);
+
     }
 }

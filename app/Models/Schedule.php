@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\DayOfWeek;
-use Database\Factories\ScheduleFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,7 +10,6 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Schedule extends Model
 {
-    /** @use HasFactory<ScheduleFactory> */
     use HasFactory;
 
     protected $fillable = [

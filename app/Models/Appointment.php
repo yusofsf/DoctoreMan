@@ -3,31 +3,29 @@
 namespace App\Models;
 
 use App\Enums\AppointmentStatus;
-use Database\Factories\AppointmentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Appointment extends Model
 {
-    /** @use HasFactory<AppointmentFactory> */
     use HasFactory;
 
     protected $fillable = [
         'date',
         'status',
-        'user_id',
+        'doctor_id',
         'schedule_id',
         'patient_id',
+        'notes'
     ];
 
-    public function user(): BelongsTo
+    public function doctor(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Doctor::class);
     }
 
+    // رابطه با بیمار
     public function patient(): BelongsTo
     {
         return $this->belongsTo(Patient::class);
@@ -46,7 +44,8 @@ class Appointment extends Model
     protected function casts(): array
     {
         return [
-            'status' => AppointmentStatus::class
+            'status' => AppointmentStatus::class,
+            'date' => 'date'
         ];
     }
 }

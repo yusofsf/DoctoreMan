@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Gender;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,12 +14,12 @@ class Patient extends Model
     use HasFactory;
 
     protected $fillable = [
+        'user_id',
         'first_name',
         'last_name',
-        'user_name',
         'gender',
         'phone_number',
-        'birthdate',
+        'birth_date',
     ];
     public function appointments(): HasMany
     {
@@ -33,7 +34,8 @@ class Patient extends Model
     protected function casts(): array
     {
         return [
-            'birthdate' => 'date',
+            'birth_date' => 'date',
+            'gender' => Gender::class,
         ];
     }
 }
