@@ -4,10 +4,9 @@ namespace App\Http\Controllers\Api\v1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\v1\User\StoreRequest;
-use App\Http\Requests\User\UpdateRequest;
+use App\Http\Requests\Api\v1\User\UpdateRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Response;
 
 class UserController extends Controller
@@ -17,8 +16,6 @@ class UserController extends Controller
      */
     public function index(): JsonResponse
     {
-        //Gate::allowIf(fn (User $user) => $user->isAdministrator());
-
         return Response::json([
             'data' => User::with('patient', 'doctor', 'administrator')->get(),
             'message' => 'Users List',
@@ -32,8 +29,6 @@ class UserController extends Controller
      */
     public function show(User $user): JsonResponse
     {
-        //Gate::allowIf(fn (User $user) => $user->isAdministrator());
-
         return Response::json([
             'data' => $user,
             'message' => 'User Show',
@@ -46,8 +41,6 @@ class UserController extends Controller
      */
     public function destroy(User $user): JsonResponse
     {
-        Gate::allowIf(fn (User $user) => $user->isAdministrator());
-
         $user->delete();
 
         return Response::json([

@@ -6,15 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\v1\Patient\StoreRequest;
 use App\Http\Requests\Api\v1\Patient\UpdateRequest;
 use App\Models\Patient;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Response;
 
 class PatientController extends Controller
 {
-    use AuthorizesRequests;
-
     /**
      * @return JsonResponse
      */
