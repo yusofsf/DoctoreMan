@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\AppointmentStatus;
+use App\Models\Doctor;
 use App\Models\Patient;
 use App\Models\Schedule;
 use App\Models\User;
@@ -24,9 +25,10 @@ return new class extends Migration
                 $table->enum('status', array_column(AppointmentStatus::cases(), 'value'))
                     ->default(AppointmentStatus::AVAILABLE->value);
             }
-            $table->foreignIdFor(User::class);
-            $table->foreignIdFor(Schedule::class);
-            $table->foreignIdFor(Patient::class)->nullable();
+            $table->text('notes')->nullable();
+            $table->foreignIdFor(Doctor::class);
+            $table->foreignIdFor(Schedule::class)->nullable();
+            $table->foreignIdFor(Patient::class);
             $table->timestamps();
         });
     }
@@ -36,6 +38,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('appoinments');
+        Schema::dropIfExists('appointments');
     }
 };

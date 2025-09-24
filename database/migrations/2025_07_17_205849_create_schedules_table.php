@@ -23,7 +23,7 @@ return new class extends Migration
             $table->time('start_time');
             $table->time('end_time');
             $table->foreignIdFor(User::class);
-            $table->unique(['doctor_id', 'start_time', 'day_of_week']);
+            $table->unique(['user_id', 'start_time', 'day_of_week']);
             $table->timestamps();
         });
     }
