@@ -1,19 +1,20 @@
 <?php
 
-namespace App\Http\Requests\Api\v1\Patient;
+namespace App\Http\Requests\Api\v1\Schedule;
 
+use App\Enums\DayOfWeek;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class PatientUpdateRequest extends FormRequest
+class UpdateRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
-        return $this->user()->isAdministrator() || $this->user()->isPatient();
+        return $this->user->isAministrator() || $this->user->isDoctor();
     }
 
     /**
@@ -24,9 +25,16 @@ class PatientUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'gender' => ['required', Rule::in(['مرد', 'زن'])],
-            'birthdate' => 'required|date',
-            'phone_number' => 'string|max:255'
+            'day_of_week' => [
+                'required',
+                Rule::enum(DayOfWeek::class)
+            ],
+            'start_time' => [
+                Rule::date()->format('H:i:s')
+            ],
+            'end_time' => [
+                Rule::date()->format('H:i:s')
+            ],
         ];
     }
 }

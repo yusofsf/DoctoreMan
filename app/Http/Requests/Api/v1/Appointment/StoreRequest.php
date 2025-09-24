@@ -6,14 +6,14 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class AppointmentUpdateRequest extends FormRequest
+class StoreRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
-        return $this->user()->isAdministrator() || $this->user()->isDoctor();
+        return true;
     }
 
     /**
@@ -24,7 +24,7 @@ class AppointmentUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'date_time' => [
+            'date' => [
                 'required',
                 Rule::date()->format('Y-m-d')
             ],

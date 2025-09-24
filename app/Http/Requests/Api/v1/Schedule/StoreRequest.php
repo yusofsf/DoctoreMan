@@ -1,20 +1,20 @@
 <?php
 
-namespace App\Http\Requests\Api\v1\Appointment;
+namespace App\Http\Requests\Api\v1\Schedule;
 
-use App\Enums\AppointmentStatus;
+use App\Enums\DayOfWeek;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class AppointmentStoreRequest extends FormRequest
+class StoreRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
-        return !$this->user()->isDoctor();
+        return $this->user()->isPatient();
     }
 
     /**
@@ -25,10 +25,14 @@ class AppointmentStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'date' => [
+            'day_of_week' => [
                 'required',
-                Rule::date()->format('Y-m-d')
+                Rule::enum(DayOfWeek::class)
             ],
+            'start_time' => [
+                'required',
+                Rule::date()->format('H:i:s')
+            ]
         ];
     }
 }
