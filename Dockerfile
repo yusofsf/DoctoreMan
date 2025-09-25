@@ -1,7 +1,7 @@
 FROM php:8.4-fpm-alpine
 
-RUN echo "https://mirror.arvancloud.ir/alpine/v3.20/main" > /etc/apk/repositories && \
-    echo "https://mirror.arvancloud.ir/alpine/v3.20/community" >> /etc/apk/repositories && \
+RUN echo "https://mirror.arvancloud.ir/alpine/v3.21/main" > /etc/apk/repositories && \
+    echo "https://mirror.arvancloud.ir/alpine/v3.21/community" >> /etc/apk/repositories && \
     apk update
 
 RUN apk add --no-cache \
