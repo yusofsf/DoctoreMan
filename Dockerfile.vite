@@ -8,7 +8,6 @@ RUN npm ci --only=production=false && \
     npm cache clean --force
 
 COPY vite.config.js ./
-COPY tailwind.config.js ./
 
 EXPOSE 5173
 
