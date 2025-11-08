@@ -71,46 +71,7 @@ class Doctor extends Model
      *
      * @return array
      */
-    public function getWorkingDays(): array
-    {
-        $workingDays = [];
 
-        foreach (DayOfWeek::cases() as $day) {
-            if ($this->isWorkingDay($day)) {
-                $workingDays[$day->value] = $this->getWorkingHoursForDay($day);
-            }
-        }
-
-        return $workingDays;
-    }
-
-    /**
-     * Set working hours for a specific day
-     *
-     * @param string|DayOfWeek $day
-     * @param string $startTime
-     * @param string $endTime
-     * @param bool $isWorking
-     * @return void
-     */
-    public function setWorkingHours(string|DayOfWeek $day, string $startTime, string $endTime, bool $isWorking = true): void
-    {
-        $dayOfWeek = is_string($day) ? DayOfWeek::fromName($day) : $day;
-
-        if (!$dayOfWeek) {
-            return;
-        }
-
-        $workingDays = $this->working_days ?? [];
-
-        $workingDays[$dayOfWeek->value] = [
-            'is_working' => $isWorking,
-            'start_time' => $startTime,
-            'end_time' => $endTime,
-        ];
-
-        $this->working_days = $workingDays;
-    }
 
     /**
      * Set multiple working days at once
@@ -148,6 +109,19 @@ class Doctor extends Model
     public function schedules(): HasMany
     {
         return $this->hasMany(Schedule::class);
+    }
+
+    public function isWithinWorkHours(string $time): bool
+    {
+        if (!$this->work_start_time || !$this->work_end_time) {
+            return false;
+        }
+
+        $checkTime = \Carbon\Carbon::parse($time);
+        $startTime = \Carbon\Carbon::parse($this->work_start_time);
+        $endTime = \Carbon\Carbon::parse($this->work_end_time);
+
+        return $checkTime->between($startTime, $endTime);
     }
 
     protected function casts(): array
