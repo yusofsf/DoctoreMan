@@ -6,12 +6,15 @@ use App\Enums\DayOfWeek;
 use App\Filament\Resources\ScheduleResource\Pages;
 use App\Models\Appointment;
 use App\Models\Schedule;
+use App\Rules\WithinDoctorWorkDays;
+use App\Rules\WithinDoctorWorkHours;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Tables\Enums\ActionsPosition;
+use Filament\Notifications\Notification;
 
 class ScheduleResource extends Resource
 {
@@ -41,11 +44,117 @@ class ScheduleResource extends Resource
                 Forms\Components\Select::make('day_of_week')
                     ->options(DayOfWeek::getOptions())
                     ->required()
-                    ->label('روز هفته'),
+                    ->label('روز هفته')
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(function ($state, $get) {
+                        $appointmentId = $get('appointment_id');
+
+                        if (!$appointmentId || !$state) {
+                            return;
+                        }
+
+                        $appointment = Appointment::with('doctor')->find($appointmentId);
+
+                        if (!$appointment || !$appointment->doctor) {
+                            return;
+                        }
+
+                        $doctor = $appointment->doctor;
+                        $workingDays = $doctor->working_days;
+
+                        if (!$workingDays || empty($workingDays)) {
+                            Notification::make()
+                                ->danger()
+                                ->title('خطا')
+                                ->body('روزهای کاری دکتر تعریف نشده است.')
+                                ->send();
+                            return;
+                        }
+
+                        $selectedDay = $state instanceof DayOfWeek ? $state->value : $state;
+
+                        if (!in_array($selectedDay, $workingDays)) {
+                            // دریافت برچسب فارسی برای روز انتخابی
+                            $dayLabel = 'نامشخص';
+                            if ($state instanceof DayOfWeek) {
+                                $dayLabel = $state->getLabel();
+                            } else {
+                                try {
+                                    $dayLabel = DayOfWeek::from($state)->getLabel();
+                                } catch (\Exception $e) {
+                                    $dayLabel = $state;
+                                }
+                            }
+
+                            // تبدیل تمام روزهای کاری به فارسی
+                            $workingDaysLabels = collect($workingDays)->map(function($day) {
+                                try {
+                                    return DayOfWeek::from($day)->getLabel();
+                                } catch (\Exception $e) {
+                                    return $day;
+                                }
+                            })->implode('، ');
+
+                            Notification::make()
+                                ->danger()
+                                ->title('خطا در انتخاب روز')
+                                ->body("روز {$dayLabel} در روزهای کاری دکتر نیست. روزهای کاری: {$workingDaysLabels}")
+                                ->send();
+                        }
+                    })
+                    ->rules([
+                        function ($get) {
+                            return new WithinDoctorWorkDays($get('appointment_id'));
+                        },
+                    ]),
 
                 Forms\Components\TimePicker::make('start_time')
                     ->required()
-                    ->label('زمان شروع'),
+                    ->label('زمان شروع')
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(function ($state, $get, $set) {
+                        $appointmentId = $get('appointment_id');
+
+                        if (!$appointmentId || !$state) {
+                            return;
+                        }
+
+                        $appointment = Appointment::with('doctor')->find($appointmentId);
+
+                        if (!$appointment || !$appointment->doctor) {
+                            return;
+                        }
+
+                        $doctor = $appointment->doctor;
+
+                        if (!$doctor->work_start_time || !$doctor->work_end_time) {
+                            Notification::make()
+                                ->danger()
+                                ->title('خطا')
+                                ->body('ساعات کاری دکتر تعریف نشده است.')
+                                ->send();
+                            $set('start_time', null);
+                            return;
+                        }
+
+                        $startTime = \Carbon\Carbon::parse($state);
+                        $workStart = \Carbon\Carbon::parse($doctor->work_start_time);
+                        $workEnd = \Carbon\Carbon::parse($doctor->work_end_time);
+
+                        if ($startTime->lt($workStart) || $startTime->gt($workEnd)) {
+                            Notification::make()
+                                ->danger()
+                                ->title('خطا در زمان شروع')
+                                ->body("زمان شروع باید بین ساعات کاری دکتر ({$workStart->format('H:i')} تا {$workEnd->format('H:i')}) باشد.")
+                                ->send();
+                            $set('start_time', null);
+                        }
+                    })
+                    ->rules([
+                        function ($get) {
+                            return new WithinDoctorWorkHours($get('appointment_id'));
+                        },
+                    ]),
             ]);
     }
 
