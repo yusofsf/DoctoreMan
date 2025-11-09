@@ -21,7 +21,7 @@ class SchedulePolicy
      */
     public function view(User $user, Schedule $schedule): bool
     {
-        return $user->isAdministrator() || $user->isDoctor() || $user->id == $schedule->patient()->user_id;
+        return $user->isAdministrator() || $user->isDoctor();
     }
 
     /**
