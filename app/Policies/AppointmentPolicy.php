@@ -21,7 +21,7 @@ class AppointmentPolicy
      */
     public function view(User $user, Appointment $appointment): bool
     {
-        return $user->isAdministrator() || $user->isDoctor();
+        return $user->isAdministrator() || $user->isDoctor() || $user->id == $appointment->patient()->user_id;
     }
 
     /**
@@ -29,7 +29,7 @@ class AppointmentPolicy
      */
     public function create(User $user): bool
     {
-        return $user->isAdministrator() || $user->isDoctor();
+        return $user->isPatient();
     }
 
     /**
