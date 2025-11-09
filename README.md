@@ -73,27 +73,17 @@ cp .env.example .env
 php artisan key:generate
 ```
 
-5. **تنظیم اطلاعات دیتابیس در فایل `.env`**
-```env
-DB_CONNECTION=sqlite
-```
-
-6. **اجرای Migration و Seeder**
+5. **اجرای Migration و Seeder**
 ```bash
 php artisan migrate --seed
 ```
 
-7. **ایجاد کاربر ادمین**
-```bash
-php artisan make:filament-user
-```
-
-8. **راه‌اندازی سرور**
+6. **راه‌اندازی سرور**
 ```bash
 php artisan serve
 ```
 
-9. **دسترسی به پنل ادمین**
+7. **دسترسی به پنل ادمین**
 ```
 http://localhost:8000/panel
 ```
