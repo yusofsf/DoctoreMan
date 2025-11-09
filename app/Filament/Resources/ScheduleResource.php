@@ -8,6 +8,7 @@ use App\Models\Appointment;
 use App\Models\Schedule;
 use App\Rules\WithinDoctorWorkDays;
 use App\Rules\WithinDoctorWorkHours;
+use Carbon\Carbon;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -46,7 +47,7 @@ class ScheduleResource extends Resource
                     ->required()
                     ->label('روز هفته')
                     ->live(onBlur: true)
-                    ->afterStateUpdated(function ($state, $get) {
+                    ->afterStateUpdated(function ($state, $get, $set) {
                         $appointmentId = $get('appointment_id');
 
                         if (!$appointmentId || !$state) {
@@ -74,7 +75,6 @@ class ScheduleResource extends Resource
                         $selectedDay = $state instanceof DayOfWeek ? $state->value : $state;
 
                         if (!in_array($selectedDay, $workingDays)) {
-                            // دریافت برچسب فارسی برای روز انتخابی
                             $dayLabel = 'نامشخص';
                             if ($state instanceof DayOfWeek) {
                                 $dayLabel = $state->getLabel();
@@ -100,6 +100,54 @@ class ScheduleResource extends Resource
                                 ->title('خطا در انتخاب روز')
                                 ->body("روز {$dayLabel} در روزهای کاری دکتر نیست. روزهای کاری: {$workingDaysLabels}")
                                 ->send();
+                        } else {
+                            // اگر روز معتبر است و start_time وجود دارد، end_time را مجدداً محاسبه کن
+                            $startTime = $get('start_time');
+                            if ($startTime) {
+                                $appointment = Appointment::with('doctor')->find($get('appointment_id'));
+                                if ($appointment && $appointment->doctor) {
+                                    $doctor = $appointment->doctor;
+                                    $selectedDay = $state instanceof DayOfWeek ? $state : DayOfWeek::from($state);
+                                    $workingHours = $doctor->getWorkingHoursForDay($selectedDay);
+                                    
+                                    if ($workingHours['is_working'] && !empty($workingHours['start_time']) && !empty($workingHours['end_time'])) {
+                                        try {
+                                            $parseTime = function($time) {
+                                                if (empty($time)) return null;
+                                                if ($time instanceof Carbon) return $time->copy();
+                                                $formats = ['H:i:s', 'H:i', 'H:i:s.u'];
+                                                foreach ($formats as $format) {
+                                                    try {
+                                                        $parsed = Carbon::createFromFormat($format, $time);
+                                                        if ($parsed) return $parsed;
+                                                    } catch (\Exception $e) {
+                                                        continue;
+                                                    }
+                                                }
+                                                return Carbon::parse($time);
+                                            };
+
+                                            $startTimeObj = $parseTime($startTime);
+                                            $workEnd = $parseTime($workingHours['end_time']);
+                                            
+                                            if ($startTimeObj && $workEnd) {
+                                                $baseDate = Carbon::today();
+                                                $startTimeObj->setDate($baseDate->year, $baseDate->month, $baseDate->day);
+                                                $workEnd->setDate($baseDate->year, $baseDate->month, $baseDate->day);
+                                                
+                                                $consultationDuration = $doctor->consultation_duration ?? 30;
+                                                $calculatedEndTime = $startTimeObj->copy()->addMinutes($consultationDuration);
+                                                
+                                                if ($calculatedEndTime->lte($workEnd)) {
+                                                    $set('end_time', $calculatedEndTime->format('H:i:s'));
+                                                }
+                                            }
+                                        } catch (\Exception $e) {
+                                            // در صورت خطا، کاری انجام نده
+                                        }
+                                    }
+                                }
+                            }
                         }
                     })
                     ->rules([
@@ -114,8 +162,20 @@ class ScheduleResource extends Resource
                     ->live(onBlur: true)
                     ->afterStateUpdated(function ($state, $get, $set) {
                         $appointmentId = $get('appointment_id');
+                        $dayOfWeek = $get('day_of_week');
 
+                        // اگر start_time خالی شد، end_time را هم خالی کن
                         if (!$appointmentId || !$state) {
+                            $set('end_time', null);
+                            return;
+                        }
+
+                        if (!$dayOfWeek) {
+                            Notification::make()
+                                ->warning()
+                                ->title('توجه')
+                                ->body('لطفاً ابتدا روز هفته را انتخاب کنید.')
+                                ->send();
                             return;
                         }
 
@@ -127,34 +187,131 @@ class ScheduleResource extends Resource
 
                         $doctor = $appointment->doctor;
 
-                        if (!$doctor->work_start_time || !$doctor->work_end_time) {
+                        // تبدیل dayOfWeek به enum
+                        $selectedDay = $dayOfWeek instanceof DayOfWeek 
+                            ? $dayOfWeek 
+                            : (is_string($dayOfWeek) ? DayOfWeek::from($dayOfWeek) : null);
+
+                        if (!$selectedDay) {
+                            return;
+                        }
+
+                        $workingHours = $doctor->getWorkingHoursForDay($selectedDay);
+
+                        // بررسی اینکه آیا این روز یک روز کاری است
+                        if (!$workingHours['is_working']) {
                             Notification::make()
                                 ->danger()
                                 ->title('خطا')
-                                ->body('ساعات کاری دکتر تعریف نشده است.')
+                                ->body('این روز در روزهای کاری دکتر نیست.')
                                 ->send();
                             $set('start_time', null);
                             return;
                         }
 
-                        $startTime = \Carbon\Carbon::parse($state);
-                        $workStart = \Carbon\Carbon::parse($doctor->work_start_time);
-                        $workEnd = \Carbon\Carbon::parse($doctor->work_end_time);
-
-                        if ($startTime->lt($workStart) || $startTime->gt($workEnd)) {
+                        // بررسی اینکه ساعات کاری برای این روز تعریف شده است
+                        if (empty($workingHours['start_time']) || empty($workingHours['end_time'])) {
                             Notification::make()
                                 ->danger()
-                                ->title('خطا در زمان شروع')
-                                ->body("زمان شروع باید بین ساعات کاری دکتر ({$workStart->format('H:i')} تا {$workEnd->format('H:i')}) باشد.")
+                                ->title('خطا')
+                                ->body('ساعات کاری دکتر برای این روز تعریف نشده است.')
                                 ->send();
                             $set('start_time', null);
+                            return;
+                        }
+
+                        // تبدیل زمان‌ها به Carbon برای مقایسه صحیح
+                        try {
+                            $parseTime = function($time) {
+                                if (empty($time)) {
+                                    return null;
+                                }
+                                if ($time instanceof Carbon) {
+                                    return $time->copy();
+                                }
+                                $formats = ['H:i:s', 'H:i', 'H:i:s.u'];
+                                foreach ($formats as $format) {
+                                    try {
+                                        $parsed = Carbon::createFromFormat($format, $time);
+                                        if ($parsed) {
+                                            return $parsed;
+                                        }
+                                    } catch (\Exception $e) {
+                                        continue;
+                                    }
+                                }
+                                return Carbon::parse($time);
+                            };
+
+                            $startTime = $parseTime($state);
+                            $workStart = $parseTime($workingHours['start_time']);
+                            $workEnd = $parseTime($workingHours['end_time']);
+
+                            if (!$startTime || !$workStart || !$workEnd) {
+                                throw new \Exception('فرمت زمان نامعتبر است.');
+                            }
+
+                            $baseDate = Carbon::today();
+                            $startTime->setDate($baseDate->year, $baseDate->month, $baseDate->day);
+                            $workStart->setDate($baseDate->year, $baseDate->month, $baseDate->day);
+                            $workEnd->setDate($baseDate->year, $baseDate->month, $baseDate->day);
+
+                            $startTime->second(0)->microsecond(0);
+                            $workStart->second(0)->microsecond(0);
+                            $workEnd->second(0)->microsecond(0);
+
+                            // بررسی اینکه زمان شروع در بازه ساعات کاری است یا نه
+                            if ($startTime->lt($workStart) || $startTime->gt($workEnd)) {
+                                Notification::make()
+                                    ->danger()
+                                    ->title('خطا در زمان شروع')
+                                    ->body("زمان شروع باید بین ساعات کاری دکتر ({$workStart->format('H:i')} تا {$workEnd->format('H:i')}) باشد.")
+                                    ->send();
+                                $set('start_time', null);
+                                $set('end_time', null);
+                                return;
+                            }
+
+                            $consultationDuration = $doctor->consultation_duration ?? 30; // پیش‌فرض 30 دقیقه
+                            $calculatedEndTime = $startTime->copy()->addMinutes($consultationDuration);
+
+                            // بررسی اینکه زمان پایان از ساعت کاری خارج نشود
+                            if ($calculatedEndTime->gt($workEnd)) {
+                                Notification::make()
+                                    ->danger()
+                                    ->title('خطا در زمان')
+                                    ->body("با مدت زمان جلسه ({$consultationDuration} دقیقه)، زمان پایان ({$calculatedEndTime->format('H:i')}) از ساعت کاری دکتر ({$workEnd->format('H:i')}) تجاوز می‌کند.")
+                                    ->send();
+                                $set('start_time', null);
+                                $set('end_time', null);
+                                return;
+                            }
+
+                            // تنظیم زمان پایان
+                            $set('end_time', $calculatedEndTime->format('H:i:s'));
+                        } catch (\Exception $e) {
+                            Notification::make()
+                                ->danger()
+                                ->title('خطا')
+                                ->body('فرمت زمان نامعتبر است.')
+                                ->send();
+                            $set('start_time', null);
+                            $set('end_time', null);
                         }
                     })
                     ->rules([
                         function ($get) {
-                            return new WithinDoctorWorkHours($get('appointment_id'));
+                            return new WithinDoctorWorkHours($get('appointment_id'), $get('day_of_week'));
                         },
                     ]),
+
+                Forms\Components\TimePicker::make('end_time')
+                    ->label('زمان پایان')
+                    ->required()
+                    ->readonly()
+                    ->dehydrated()
+                    ->helperText('زمان پایان به صورت خودکار بر اساس مدت زمان جلسه محاسبه می‌شود')
+                    ->reactive(),
             ]);
     }
 
