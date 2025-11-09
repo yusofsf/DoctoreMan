@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\DoctorResource\Pages;
 
+use App\Enums\DayOfWeek;
 use App\Filament\Resources\DoctorResource;
 use Filament\Resources\Pages\CreateRecord;
 
