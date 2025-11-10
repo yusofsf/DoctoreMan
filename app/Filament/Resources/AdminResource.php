@@ -74,6 +74,13 @@ class AdminResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->label('نام نمایشی'),
+
+                Tables\Columns\TextColumn::make('last_login_ip')
+                    ->label('آخرین آیپی لاگین شده'),
+
+                Tables\Columns\TextColumn::make('last_login_at')
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->label('آخرین زمان لاگین شده'),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
