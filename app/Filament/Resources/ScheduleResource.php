@@ -303,7 +303,8 @@ class ScheduleResource extends Resource
                         function ($get) {
                             return new WithinDoctorWorkHours($get('appointment_id'), $get('day_of_week'));
                         },
-                    ]),
+                    ])
+                ->seconds(false),
 
                 Forms\Components\TimePicker::make('end_time')
                     ->label('زمان پایان')
@@ -311,6 +312,7 @@ class ScheduleResource extends Resource
                     ->readonly()
                     ->dehydrated()
                     ->helperText('زمان پایان به صورت خودکار بر اساس مدت زمان جلسه محاسبه می‌شود')
+                    ->seconds(false)
                     ->reactive(),
             ]);
     }
@@ -338,12 +340,12 @@ class ScheduleResource extends Resource
                     ->label('روز هفته'),
 
                 Tables\Columns\TextColumn::make('start_time')
-                    ->time()
+                    ->time("H:i")
                     ->sortable()
                     ->label('زمان شروع'),
 
                 Tables\Columns\TextColumn::make('end_time')
-                    ->time()
+                    ->time("H:i")
                     ->sortable()
                     ->label('زمان پایان'),
             ])
